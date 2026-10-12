@@ -1,0 +1,118 @@
+@model AssignmentsViewModel
+@{
+    ViewData["Title"] = "Assign reports";
+    var user = Model.SelectedUser;
+}
+<div class="rms-page-head">
+    <div>
+        <h1>Assign reports</h1>
+        <p class="rms-lead">Choose a user, tick the reports they should be able to run, and save.</p>
+    </div>
+</div>
+
+<form asp-action="Index" method="get" class="rms-panel rms-user-pick" id="user-pick">
+    <label for="userId" class="form-label">User</label>
+    <div class="rms-user-pick-row">
+        <select id="userId" name="userId" class="form-select" data-auto-submit>
+            <option value="">Choose a user</option>
+            @foreach (var item in Model.Users)
+            {
+                <option value="@item.Id" selected="@(item.Id == user?.Id)">
+                    @(string.IsNullOrWhiteSpace(item.FullName) ? item.AdUsername : $"{item.FullName} ({item.AdUsername})") - @item.Role@(item.Active ? "" : ", inactive")
+                </option>
+            }
+        </select>
+        <button type="submit" class="btn btn-outline-primary">Show</button>
+    </div>
+</form>
+
+@if (user is null)
+{
+    @if (Model.Users.Count == 0)
+    {
+        <p class="rms-empty">There are no users yet. <a asp-controller="Users" asp-action="Create">Add a user</a> first.</p>
+    }
+}
+else
+{
+    @if (user.Role == Roles.Admin)
+    {
+        <div class="alert alert-info" role="note">
+            @user.AdUsername is an administrator and can already run every report. Assignments below only matter if the account becomes a viewer.
+        </div>
+    }
+    @if (!user.Active)
+    {
+        <div class="alert alert-warning" role="note">This account is inactive and cannot sign in.</div>
+    }
+
+    @if (Model.TotalReports == 0)
+    {
+        <p class="rms-empty">There are no reports to assign yet. <a asp-controller="ReportDefinitions" asp-action="Create">Add a report</a> first.</p>
+    }
+    else
+    {
+        <form asp-action="Save" method="post" id="assignment-form">
+            <input type="hidden" name="userId" value="@user.Id" />
+
+            <div class="rms-panel">
+                <div class="rms-assign-bar">
+                    <input type="search" class="form-control" id="assignment-filter" placeholder="Filter reports" aria-label="Filter reports" />
+                    <span id="assignment-count" aria-live="polite"></span>
+                    <div class="btn-group" role="group" aria-label="Select">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" data-select-all="true">Select all shown</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" data-select-all="false">Clear all shown</button>
+                    </div>
+                </div>
+
+                @foreach (var application in Model.Applications)
+                {
+                    <fieldset class="rms-assign-app">
+                        <legend>
+                            <label class="form-check">
+                                <input type="checkbox" class="form-check-input" data-group-toggle aria-label="All reports in @application.ApplicationName" />
+                                <span>@application.ApplicationName</span>
+                            </label>
+                        </legend>
+                        @foreach (var category in application.Categories)
+                        {
+                            <div class="rms-assign-cat">
+                                <h3>@category.CategoryName</h3>
+                                <ul>
+                                    @foreach (var report in category.Reports)
+                                    {
+                                        <li data-search="@($"{report.Name} {report.Code} {category.CategoryName} {application.ApplicationName}".ToLowerInvariant())">
+                                            <label class="form-check">
+                                                <input type="checkbox" class="form-check-input" name="reportIds" value="@report.ReportId" checked="@report.Assigned" />
+                                                <span>
+                                                    @report.Name
+                                                    @if (!report.Available)
+                                                    {
+                                                        <span class="rms-status rms-status-off" title="Inactive reports are hidden from viewers until reactivated">inactive</span>
+                                                    }
+                                                    @if (!string.IsNullOrWhiteSpace(report.Description))
+                                                    {
+                                                        <span class="rms-sub">@report.Description</span>
+                                                    }
+                                                </span>
+                                            </label>
+                                        </li>
+                                    }
+                                </ul>
+                            </div>
+                        }
+                    </fieldset>
+                }
+            </div>
+
+            <div class="rms-form-actions rms-form-actions-page">
+                <button type="submit" class="btn btn-primary">Save assignments</button>
+                <a class="btn btn-link" asp-action="Index" asp-route-userId="@user.Id">Undo changes</a>
+            </div>
+        </form>
+    }
+}
+
+@section Scripts {
+    <script src="~/js/assignments.js" asp-append-version="true"></script>
+}

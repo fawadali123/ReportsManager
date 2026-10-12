@@ -1,0 +1,74 @@
+@model UserListViewModel
+@{
+    ViewData["Title"] = "Users";
+}
+<div class="rms-page-head">
+    <div>
+        <h1>Users</h1>
+        <p class="rms-lead">Only people listed here can sign in, and only while they are in the right Active Directory group.</p>
+    </div>
+    <a class="btn btn-primary" asp-action="Create"><i class="bi bi-plus-lg" aria-hidden="true"></i> Add user</a>
+</div>
+
+<div class="rms-panel">
+    @if (Model.Users.Count == 0)
+    {
+        <p class="rms-empty">No users yet. Add the first one to let them sign in.</p>
+    }
+    else
+    {
+        <div class="rms-table-tools">
+            <input type="search" class="form-control" placeholder="Filter users" aria-label="Filter users" data-table-filter="#users-table" />
+        </div>
+        <div class="table-responsive">
+            <table class="table rms-table" id="users-table">
+                <thead>
+                    <tr>
+                        <th scope="col">Code</th>
+                        <th scope="col">Name</th>
+                        <th scope="col">AD username</th>
+                        <th scope="col">Email</th>
+                        <th scope="col">Role</th>
+                        <th scope="col">Status</th>
+                        <th scope="col" class="text-end">Reports</th>
+                        <th scope="col"><span class="visually-hidden">Actions</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var user in Model.Users)
+                    {
+                        <tr>
+                            <td>@user.Code</td>
+                            <td>@user.FullName</td>
+                            <td>@user.AdUsername</td>
+                            <td>@user.Email</td>
+                            <td>@user.Role</td>
+                            <td><span class="rms-status @(user.Active ? "rms-status-on" : "rms-status-off")">@(user.Active ? "Active" : "Inactive")</span></td>
+                            <td class="text-end rms-num">
+                                @if (user.Role == Roles.Admin)
+                                {
+                                    <span title="Administrators can run every report">All</span>
+                                }
+                                else
+                                {
+                                    <a asp-controller="Assignments" asp-action="Index" asp-route-userId="@user.Id"
+                                       title="Assign reports to @user.AdUsername">@Model.AssignedReportCounts.GetValueOrDefault(user.Id)</a>
+                                }
+                            </td>
+                            <td class="rms-row-actions">
+                                <a class="btn btn-sm btn-outline-secondary" asp-action="Edit" asp-route-id="@user.Id">Edit</a>
+                                @if (user.Id != Model.CurrentUserId)
+                                {
+                                    <form asp-action="Delete" asp-route-id="@user.Id" method="post"
+                                          data-confirm="Delete user @user.AdUsername? Their report assignments are removed as well.">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                                    </form>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>

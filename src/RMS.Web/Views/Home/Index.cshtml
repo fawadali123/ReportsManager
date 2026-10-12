@@ -1,0 +1,90 @@
+@model DashboardViewModel
+@{
+    ViewData["Title"] = "Overview";
+}
+<div class="rms-page-head">
+    <div>
+        <h1>Overview</h1>
+        <p class="rms-lead">What is set up, and what people have been running.</p>
+    </div>
+    <a class="btn btn-primary" asp-area="" asp-controller="Reports" asp-action="Index">
+        <i class="bi bi-play-fill" aria-hidden="true"></i> Run a report
+    </a>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-5">
+        <section class="rms-panel" aria-labelledby="setup-heading">
+            <h2 id="setup-heading" class="rms-panel-title">Setup</h2>
+            <ul class="rms-overview">
+                <li>
+                    <a asp-area="Admin" asp-controller="ReportDefinitions" asp-action="Index">Reports</a>
+                    <span>@Model.Reports defined, @Model.ActiveReports available to run</span>
+                </li>
+                <li>
+                    <a asp-area="Admin" asp-controller="Applications" asp-action="Index">Applications</a>
+                    <span>@Model.Applications</span>
+                </li>
+                <li>
+                    <a asp-area="Admin" asp-controller="Categories" asp-action="Index">Categories</a>
+                    <span>@Model.Categories</span>
+                </li>
+                <li>
+                    <a asp-area="Admin" asp-controller="Users" asp-action="Index">Users</a>
+                    <span>@Model.Users registered, @Model.ActiveUsers active</span>
+                </li>
+            </ul>
+            <p class="rms-panel-foot">
+                New here? Add an application and a category, create a report, then
+                <a asp-area="Admin" asp-controller="Assignments" asp-action="Index">assign it to users</a>.
+            </p>
+        </section>
+    </div>
+
+    <div class="col-lg-7">
+        <section class="rms-panel" aria-labelledby="activity-heading">
+            <h2 id="activity-heading" class="rms-panel-title">Recent activity</h2>
+            @if (Model.RecentRuns.Count == 0)
+            {
+                <p class="rms-empty">No report has been run yet.</p>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table rms-table mb-0">
+                        <thead>
+                            <tr>
+                                <th scope="col">When</th>
+                                <th scope="col">User</th>
+                                <th scope="col">Report</th>
+                                <th scope="col">Action</th>
+                                <th scope="col" class="text-end">Rows</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var run in Model.RecentRuns)
+                            {
+                                <tr>
+                                    <td class="text-nowrap">@run.RunAt.ToString("yyyy-MM-dd HH:mm")</td>
+                                    <td>@run.Username</td>
+                                    <td>@run.ReportName</td>
+                                    <td>
+                                        @run.Action.Replace("Export:", "Export ")
+                                        @if (!run.Success)
+                                        {
+                                            <span class="rms-status rms-status-bad">failed</span>
+                                        }
+                                    </td>
+                                    <td class="text-end rms-num">@(run.RowCount?.ToString("N0"))</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <p class="rms-panel-foot">
+                    <a asp-area="Admin" asp-controller="RunHistory" asp-action="Index">See all run history</a>
+                </p>
+            }
+        </section>
+    </div>
+</div>

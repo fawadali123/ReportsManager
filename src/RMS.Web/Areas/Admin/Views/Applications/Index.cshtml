@@ -1,0 +1,70 @@
+@model IReadOnlyList<ApplicationInfo>
+@{
+    ViewData["Title"] = "Applications";
+    var defaultConnection = ViewData["DefaultConnection"] as string;
+    var databases = ViewData["Databases"] as Dictionary<int, string> ?? [];
+}
+<div class="rms-page-head">
+    <div>
+        <h1>Applications</h1>
+        <p class="rms-lead">The systems your reports draw from. Each one can point at its own database.</p>
+    </div>
+    <a class="btn btn-primary" asp-action="Create"><i class="bi bi-plus-lg" aria-hidden="true"></i> Add application</a>
+</div>
+
+<div class="rms-panel">
+    @if (Model.Count == 0)
+    {
+        <p class="rms-empty">No applications yet. Add one before creating reports.</p>
+    }
+    else
+    {
+        <div class="rms-table-tools">
+            <input type="search" class="form-control" placeholder="Filter applications" aria-label="Filter applications" data-table-filter="#applications-table" />
+        </div>
+        <div class="table-responsive">
+            <table class="table rms-table" id="applications-table">
+                <thead>
+                    <tr>
+                        <th scope="col">Code</th>
+                        <th scope="col">Name</th>
+                        <th scope="col">Description</th>
+                        <th scope="col">Database connection</th>
+                        <th scope="col">Database</th>
+                        <th scope="col">Status</th>
+                        <th scope="col"><span class="visually-hidden">Actions</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var application in Model)
+                    {
+                        <tr>
+                            <td>@application.Code</td>
+                            <td>@application.Name</td>
+                            <td class="rms-wrap">@application.Description</td>
+                            <td>
+                                @if (string.IsNullOrEmpty(application.ConnectionName))
+                                {
+                                    <span class="text-secondary">Default (@defaultConnection)</span>
+                                }
+                                else
+                                {
+                                    @application.ConnectionName
+                                }
+                            </td>
+                            <td>@databases.GetValueOrDefault(application.Id)</td>
+                            <td><span class="rms-status @(application.Active ? "rms-status-on" : "rms-status-off")">@(application.Active ? "Active" : "Inactive")</span></td>
+                            <td class="rms-row-actions">
+                                <a class="btn btn-sm btn-outline-secondary" asp-action="Edit" asp-route-id="@application.Id">Edit</a>
+                                <form asp-action="Delete" asp-route-id="@application.Id" method="post"
+                                      data-confirm="Delete application @application.Name?">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>

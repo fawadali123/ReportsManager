@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <RootNamespace>RMS.Web</RootNamespace>
+    <UserSecretsId>rms-web-8b1f6c0e-5a57-4a0c-9d0e-3c1b7e2f4a11</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\RMS.Core\RMS.Core.csproj" />
+    <ProjectReference Include="..\RMS.Infrastructure\RMS.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

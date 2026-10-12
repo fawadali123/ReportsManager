@@ -1,0 +1,140 @@
+@model ReportsPageViewModel
+@{
+    ViewData["Title"] = "Reports";
+}
+<div class="rms-page-head">
+    <div>
+        <h1>Reports</h1>
+    </div>
+</div>
+
+@if (Model.Catalog.Count == 0)
+{
+    <div class="rms-panel rms-empty-panel">
+        @if (Model.IsAdmin)
+        {
+            <h2>No reports yet</h2>
+            <p>Create the first report, then assign it to the people who should see it.</p>
+            <a class="btn btn-primary" asp-area="Admin" asp-controller="ReportDefinitions" asp-action="Create">Add a report</a>
+        }
+        else
+        {
+            <h2>No reports are assigned to you yet</h2>
+            <p>An administrator decides which reports each person can run. Ask them to assign the ones you need.</p>
+        }
+    </div>
+}
+else
+{
+    <section class="rms-picker" aria-label="Choose a report">
+        <div class="rms-picker-step">
+            <label for="pick-application" class="form-label">Application</label>
+            <select id="pick-application" class="form-select"></select>
+        </div>
+        <div class="rms-picker-step">
+            <label for="pick-category" class="form-label">Category</label>
+            <select id="pick-category" class="form-select" disabled></select>
+        </div>
+        <div class="rms-picker-step">
+            <label for="pick-report" class="form-label">Report</label>
+            <select id="pick-report" class="form-select" disabled></select>
+        </div>
+    </section>
+
+    <p id="report-placeholder" class="rms-empty">Choose an application, then a category and a report.</p>
+
+    <section id="report-area" hidden>
+        <header class="rms-report-head">
+            <div>
+                <h2 id="report-title"></h2>
+                <p id="report-description" class="rms-lead"></p>
+            </div>
+            @if (Model.IsAdmin)
+            {
+                <a id="report-edit-link" class="btn btn-sm btn-outline-secondary" href="#"
+                   data-href-template="@Url.Action("Edit", "ReportDefinitions", new { area = "Admin", id = 0 })">
+                    <i class="bi bi-pencil" aria-hidden="true"></i> Edit definition
+                </a>
+            }
+        </header>
+
+        <form id="report-form" class="rms-panel" novalidate>
+            <div id="report-fields" class="row g-3"></div>
+            <p id="report-no-parameters" class="rms-empty mb-0" hidden>This report needs no parameters.</p>
+
+            <div class="rms-form-actions">
+                <button type="submit" class="btn btn-primary" id="run-button">
+                    <i class="bi bi-play-fill" aria-hidden="true"></i> Run report
+                </button>
+                <div class="rms-export" role="group" aria-label="Download">
+                    <span class="rms-export-label">Download as</span>
+                    @foreach (var exporter in Model.Exporters)
+                    {
+                        <button type="button" class="btn btn-outline-primary btn-sm" data-export="@exporter.Format">@exporter.DisplayName</button>
+                    }
+                </div>
+            </div>
+        </form>
+
+        <div id="report-message" class="alert" role="alert" hidden></div>
+
+        <section id="report-result" class="rms-panel rms-result" aria-label="Results" hidden>
+            <div class="rms-result-bar">
+                <span id="result-summary" aria-live="polite"></span>
+                <input type="search" id="result-filter" class="form-control form-control-sm" placeholder="Filter rows" aria-label="Filter rows" />
+            </div>
+            <div class="rms-grid-scroll" tabindex="0">
+                <table class="rms-grid" id="result-grid">
+                    <thead></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <p id="result-empty" class="rms-empty" hidden></p>
+            <div class="rms-pager">
+                <label class="rms-pager-size">
+                    Rows per page
+                    <select id="result-page-size" class="form-select form-select-sm">
+                        <option>25</option>
+                        <option selected>50</option>
+                        <option>100</option>
+                        <option>250</option>
+                    </select>
+                </label>
+                <span id="result-range"></span>
+                <div class="btn-group" role="group" aria-label="Pages">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="result-prev">
+                        <i class="bi bi-chevron-left" aria-hidden="true"></i> Previous
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="result-next">
+                        Next <i class="bi bi-chevron-right" aria-hidden="true"></i>
+                    </button>
+                </div>
+            </div>
+        </section>
+    </section>
+
+    <script type="application/json" id="report-catalog">
+        @Html.Raw(Json.Serialize(new
+        {
+            selectedReportId = Model.SelectedReportId,
+            maxPreviewRows = Model.MaxPreviewRows,
+            definitionUrl = Url.Action("Definition", "Reports", new { area = "" }),
+            runUrl = Url.Action("Run", "Reports", new { area = "" }),
+            exportUrl = Url.Action("Export", "Reports", new { area = "" }),
+            reports = Model.Catalog.Select(r => new
+            {
+                id = r.ReportId,
+                name = r.ReportName,
+                applicationId = r.ApplicationId,
+                applicationName = r.ApplicationName,
+                categoryId = r.CategoryId,
+                categoryName = r.CategoryName,
+                available = r.Available,
+            }),
+        }))
+    </script>
+}
+
+@section Scripts {
+    <script src="~/js/reports.js" asp-append-version="true"></script>
+}

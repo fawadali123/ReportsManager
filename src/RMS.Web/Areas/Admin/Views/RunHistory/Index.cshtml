@@ -1,0 +1,64 @@
+@model IReadOnlyList<ReportRunLog>
+@{
+    ViewData["Title"] = "Run history";
+}
+<div class="rms-page-head">
+    <div>
+        <h1>Run history</h1>
+        <p class="rms-lead">The latest @ViewData["PageSize"] report runs and exports, newest first.</p>
+    </div>
+</div>
+
+<div class="rms-panel">
+    @if (Model.Count == 0)
+    {
+        <p class="rms-empty">No report has been run yet.</p>
+    }
+    else
+    {
+        <div class="rms-table-tools">
+            <input type="search" class="form-control" placeholder="Filter by user, report or action" aria-label="Filter run history" data-table-filter="#history-table" />
+        </div>
+        <div class="table-responsive">
+            <table class="table rms-table" id="history-table">
+                <thead>
+                    <tr>
+                        <th scope="col">When</th>
+                        <th scope="col">User</th>
+                        <th scope="col">Report</th>
+                        <th scope="col">Action</th>
+                        <th scope="col" class="text-end">Rows</th>
+                        <th scope="col" class="text-end">Seconds</th>
+                        <th scope="col">Result</th>
+                        <th scope="col">Parameters</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var run in Model)
+                    {
+                        <tr>
+                            <td class="text-nowrap">@run.RunAt.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                            <td>@run.Username</td>
+                            <td>@run.ReportName</td>
+                            <td class="text-nowrap">@run.Action.Replace("Export:", "Export ")</td>
+                            <td class="text-end rms-num">@(run.RowCount?.ToString("N0"))</td>
+                            <td class="text-end rms-num">@((run.DurationMs / 1000.0).ToString("0.0"))</td>
+                            <td>
+                                @if (run.Success)
+                                {
+                                    <span class="rms-status rms-status-on">OK</span>
+                                }
+                                else
+                                {
+                                    <span class="rms-status rms-status-bad">Failed</span>
+                                    <div class="rms-sub rms-wrap">@run.ErrorMessage</div>
+                                }
+                            </td>
+                            <td class="rms-wrap"><code class="rms-params">@run.Parameters</code></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>

@@ -1,0 +1,13 @@
+@model ErrorViewModel
+@{
+    ViewData["Title"] = "Something went wrong";
+}
+<div class="rms-message-page">
+    <h1>Something went wrong</h1>
+    <p>The page could not be shown because of an error on the server. Try again; if it keeps happening, pass the reference below to your administrator.</p>
+    @if (!string.IsNullOrEmpty(Model?.RequestId))
+    {
+        <p class="text-secondary">Reference: <code>@Model.RequestId</code></p>
+    }
+    <a class="btn btn-primary" asp-area="" asp-controller="Home" asp-action="Index">Back to start</a>
+</div>

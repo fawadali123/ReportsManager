@@ -1,0 +1,13 @@
+bin/
+obj/
+.vs/
+.idea/
+*.user
+*.suo
+publish/
+TestResults/
+
+# Local secrets and machine-specific settings. Keep connection strings out of source control.
+appsettings.Local.json
+appsettings.Production.json
+*.pubxml

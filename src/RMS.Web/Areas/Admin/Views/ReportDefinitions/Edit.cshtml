@@ -1,0 +1,204 @@
+@model ReportEditModel
+@using RMS.Core.Reporting
+@{
+    var isNew = Model.Id == 0;
+    ViewData["Title"] = isNew ? "Add report" : "Edit report";
+}
+<div class="rms-page-head">
+    <div>
+        <a class="rms-back" asp-action="Index"><i class="bi bi-arrow-left" aria-hidden="true"></i> Report setup</a>
+        <h1>@(isNew ? "Add report" : $"Edit {Model.Name}")</h1>
+    </div>
+    @if (!isNew)
+    {
+        <a class="btn btn-outline-secondary" asp-area="" asp-controller="Reports" asp-action="Index" asp-route-reportId="@Model.Id">
+            <i class="bi bi-play-fill" aria-hidden="true"></i> Run this report
+        </a>
+    }
+</div>
+
+@if (Model.Applications.Count == 0 || Model.Categories.Count == 0)
+{
+    <div class="alert alert-warning" role="alert">
+        A report belongs to an application and a category.
+        @if (Model.Applications.Count == 0)
+        {
+            <a asp-controller="Applications" asp-action="Create">Add an application</a>
+        }
+        @if (Model.Applications.Count == 0 && Model.Categories.Count == 0)
+        {
+            <span>and</span>
+        }
+        @if (Model.Categories.Count == 0)
+        {
+            <a asp-controller="Categories" asp-action="Create">add a category</a>
+        }
+        first.
+    </div>
+}
+
+<form asp-action="@(isNew ? "Create" : "Edit")" asp-route-id="@(isNew ? "" : Model.Id.ToString())" method="post" id="report-editor">
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+    <section class="rms-panel rms-form rms-form-wide">
+        <div class="row g-3">
+            <div class="col-md-3">
+                <label asp-for="Code" class="form-label"></label>
+                <input asp-for="Code" class="form-control" autofocus />
+                <span asp-validation-for="Code" class="invalid-feedback d-block"></span>
+            </div>
+            <div class="col-md-9">
+                <label asp-for="Name" class="form-label"></label>
+                <input asp-for="Name" class="form-control" />
+                <span asp-validation-for="Name" class="invalid-feedback d-block"></span>
+            </div>
+            <div class="col-12">
+                <label asp-for="Description" class="form-label"></label>
+                <input asp-for="Description" class="form-control" />
+                <span asp-validation-for="Description" class="invalid-feedback d-block"></span>
+            </div>
+            <div class="col-md-4">
+                <label asp-for="ApplicationId" class="form-label"></label>
+                <select asp-for="ApplicationId" class="form-select">
+                    <option value="0">Choose an application</option>
+                    @foreach (var application in Model.Applications)
+                    {
+                        <option value="@application.Id">@application.Name@(application.Active ? "" : " (inactive)")</option>
+                    }
+                </select>
+                <div class="form-text" id="application-database" aria-live="polite"></div>
+                <span asp-validation-for="ApplicationId" class="invalid-feedback d-block"></span>
+            </div>
+            <div class="col-md-4">
+                <label asp-for="CategoryId" class="form-label"></label>
+                <select asp-for="CategoryId" class="form-select">
+                    <option value="0">Choose a category</option>
+                    @foreach (var category in Model.Categories)
+                    {
+                        <option value="@category.Id">@category.Name@(category.Active ? "" : " (inactive)")</option>
+                    }
+                </select>
+                <span asp-validation-for="CategoryId" class="invalid-feedback d-block"></span>
+            </div>
+            <div class="col-md-2">
+                <label asp-for="QueryType" class="form-label"></label>
+                <select asp-for="QueryType" class="form-select">
+                    <option value="@ReportQueryType.Select">Query</option>
+                    @if (Model.StoredProceduresAllowed || Model.QueryType == ReportQueryType.StoredProcedure)
+                    {
+                        <option value="@ReportQueryType.StoredProcedure">Stored procedure</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <span class="form-label d-block">Status</span>
+                <div class="form-check form-switch rms-switch">
+                    <input asp-for="Active" class="form-check-input" role="switch" />
+                    <label asp-for="Active" class="form-check-label">Active</label>
+                </div>
+            </div>
+
+            <div class="col-12">
+                <label asp-for="SqlQuery" class="form-label"></label>
+                <textarea asp-for="SqlQuery" class="form-control rms-code" rows="14" spellcheck="false" autocapitalize="none" autocomplete="off"
+                          placeholder="SELECT region, SUM(amount) AS total&#10;  FROM sales&#10; WHERE sale_date BETWEEN @@FromDate AND @@ToDate&#10; GROUP BY region"></textarea>
+                <span asp-validation-for="SqlQuery" class="invalid-feedback d-block"></span>
+
+                <div class="rms-sql-tools">
+                    <button type="button" class="btn btn-sm btn-outline-primary" id="inspect-sql">
+                        <i class="bi bi-check2-circle" aria-hidden="true"></i> Check SQL and refresh parameters
+                    </button>
+                    <span id="inspect-result" role="status" aria-live="polite"></span>
+                </div>
+
+                <details class="rms-help">
+                    <summary>How to write report SQL</summary>
+                    <dl>
+                        <dt>Parameters</dt>
+                        <dd>Write <code>@@Name</code> wherever the user should supply a value, for example <code>WHERE sale_date &gt;= @@FromDate</code>. Each name becomes a field on the report screen. Values are always sent as bind variables.</dd>
+                        <dt>Optional filters</dt>
+                        <dd>Untick "Required" below and write <code>(@@Region IS NULL OR region = @@Region)</code>. An empty field arrives as NULL.</dd>
+                        <dt>Several values</dt>
+                        <dd>Give the parameter a list of choices, tick "Allow several values", and write <code>region IN (@@Regions)</code>. For an optional one: <code>(@@Regions IS NULL OR region IN (@@Regions))</code>.</dd>
+                        <dt>The signed-in user</dt>
+                        <dd>
+                            @foreach (var name in SystemParameters.ValueNames)
+                            {
+                                <code>@@@name</code>
+                            }
+                            are filled in automatically and never shown, so a report can be limited to the person running it.
+                        </dd>
+                        <dt>Which SQL dialect</dt>
+                        <dd>The application decides which database the report runs on, so write Oracle SQL for an Oracle connection and T-SQL for a SQL Server one. The <code>@@Name</code> parameters are written the same way on both.</dd>
+                        <dt>Stored procedures</dt>
+                        <dd>
+                            Choose the "Stored procedure" type and write only the call.
+                            <strong>Oracle:</strong> pass <code>@@@SystemParameters.Cursor</code> for the <code>SYS_REFCURSOR OUT</code> argument, as in
+                            <code>pkg_sales.by_region(@@FromDate, @@ToDate, @@@SystemParameters.Cursor)</code>.
+                            <strong>SQL Server:</strong> <code>EXEC dbo.usp_SalesByRegion @@FromDate, @@ToDate</code>, or with named arguments
+                            <code>EXEC dbo.usp_SalesByRegion @@From = @@FromDate, @@To = @@ToDate</code>; the first result set becomes the report.
+                        </dd>
+                        <dt>Not parameters</dt>
+                        <dd>An @@ inside quotes, comments or <code>[brackets]</code>, Oracle database links such as <code>orders@@erp_link</code>, and SQL Server globals such as <code>@@@@ROWCOUNT</code> are left alone.</dd>
+                    </dl>
+                </details>
+            </div>
+        </div>
+    </section>
+
+    <section class="rms-panel rms-form rms-form-wide" aria-labelledby="parameters-heading">
+        <h2 id="parameters-heading" class="rms-panel-title">Parameters</h2>
+        <p class="rms-lead">
+            How each <code>@@parameter</code> in the SQL appears on the report screen. These settings are optional:
+            a parameter left as it is shows as a required text box.
+        </p>
+        <p class="rms-lead">
+            To make a field a dropdown, fill in its choices: either a query that returns a value and a label
+            (<code>SELECT id, name FROM branches ORDER BY name</code>) or a fixed list (<code>A=Active;I=Inactive</code>).
+            Tick "Allow several values" to let people pick more than one, and write <code>IN (@@Name)</code> in the SQL.
+        </p>
+        <div id="parameter-list"></div>
+        <p id="parameter-empty" class="rms-empty" hidden>The SQL has no <code>@@parameters</code>, so the report runs without asking for anything. After adding some, press "Check SQL and refresh parameters".</p>
+    </section>
+
+    <div class="rms-form-actions rms-form-actions-page">
+        <button type="submit" class="btn btn-primary">@(isNew ? "Add report" : "Save changes")</button>
+        <a class="btn btn-link" asp-action="Index">Cancel</a>
+    </div>
+</form>
+
+<script type="application/json" id="report-editor-data">
+    @Html.Raw(Json.Serialize(new
+    {
+        inspectUrl = Url.Action("Inspect"),
+        applications = Model.ApplicationDatabases.ToDictionary(
+            entry => entry.Key.ToString(),
+            entry => new { connection = entry.Value.ConnectionName, database = entry.Value.Kind.DisplayName() }),
+        dataTypes = new[]
+        {
+            new { value = nameof(ParameterDataType.Text), label = "Text" },
+            new { value = nameof(ParameterDataType.Integer), label = "Whole number" },
+            new { value = nameof(ParameterDataType.Decimal), label = "Decimal number" },
+            new { value = nameof(ParameterDataType.Date), label = "Date" },
+            new { value = nameof(ParameterDataType.DateTime), label = "Date and time" },
+            new { value = nameof(ParameterDataType.Boolean), label = "Yes / No" },
+        },
+        dateTokens = DefaultValueResolver.DateTokens,
+        parameters = Model.Parameters.Select(p => new
+        {
+            name = p.Name,
+            label = p.Label,
+            dataType = p.DataType.ToString(),
+            required = p.Required,
+            allowMultiple = p.AllowMultiple,
+            defaultValue = p.DefaultValue,
+            lookupSource = p.LookupSource,
+            helpText = p.HelpText,
+        }),
+    }))
+</script>
+
+@section Scripts {
+    <partial name="_ValidationScripts" />
+    <script src="~/js/report-editor.js" asp-append-version="true"></script>
+}

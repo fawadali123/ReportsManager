@@ -1,0 +1,76 @@
+@model ApplicationEditModel
+@{
+    var isNew = Model.Id == 0;
+    ViewData["Title"] = isNew ? "Add application" : "Edit application";
+    var connectionMissing = !string.IsNullOrEmpty(Model.ConnectionName)
+        && !Model.AvailableConnections.Contains(Model.ConnectionName, StringComparer.OrdinalIgnoreCase);
+}
+<div class="rms-page-head">
+    <div>
+        <a class="rms-back" asp-action="Index"><i class="bi bi-arrow-left" aria-hidden="true"></i> Applications</a>
+        <h1>@(isNew ? "Add application" : $"Edit {Model.Name}")</h1>
+    </div>
+</div>
+
+<form asp-action="@(isNew ? "Create" : "Edit")" asp-route-id="@(isNew ? "" : Model.Id.ToString())" method="post" class="rms-panel rms-form">
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+    <div class="row g-3">
+        <div class="col-md-4">
+            <label asp-for="Code" class="form-label"></label>
+            <input asp-for="Code" class="form-control" autofocus />
+            <span asp-validation-for="Code" class="invalid-feedback d-block"></span>
+        </div>
+        <div class="col-md-8">
+            <label asp-for="Name" class="form-label"></label>
+            <input asp-for="Name" class="form-control" />
+            <span asp-validation-for="Name" class="invalid-feedback d-block"></span>
+        </div>
+        <div class="col-12">
+            <label asp-for="Description" class="form-label"></label>
+            <textarea asp-for="Description" class="form-control" rows="2"></textarea>
+            <span asp-validation-for="Description" class="invalid-feedback d-block"></span>
+        </div>
+        <div class="col-md-6">
+            <label asp-for="ConnectionName" class="form-label"></label>
+            <select asp-for="ConnectionName" class="form-select">
+                <option value="">Default: @Model.DefaultConnectionName (@Model.DefaultConnectionKind.DisplayName())</option>
+                @foreach (var name in Model.AvailableConnections)
+                {
+                    <option value="@name">@name (@Model.ConnectionKinds[name].DisplayName())</option>
+                }
+                @if (connectionMissing)
+                {
+                    <option value="@Model.ConnectionName">@Model.ConnectionName (not configured)</option>
+                }
+            </select>
+            <div class="form-text">
+                Where this application's reports run, Oracle or SQL Server. The list comes from <code>ConnectionStrings</code>
+                in the server configuration; add an entry there (and its product under <code>Database:ConnectionProviders</code>
+                if it differs from the default) to make another database available.
+            </div>
+            @if (connectionMissing)
+            {
+                <div class="text-danger small mt-1">
+                    The connection "@Model.ConnectionName" is no longer in the server configuration. Reports for this application will fail until it is restored or changed.
+                </div>
+            }
+        </div>
+        <div class="col-md-6">
+            <span class="form-label d-block">Status</span>
+            <div class="form-check form-switch rms-switch">
+                <input asp-for="Active" class="form-check-input" role="switch" />
+                <label asp-for="Active" class="form-check-label">Active (its reports are visible to viewers)</label>
+            </div>
+        </div>
+    </div>
+
+    <div class="rms-form-actions">
+        <button type="submit" class="btn btn-primary">@(isNew ? "Add application" : "Save changes")</button>
+        <a class="btn btn-link" asp-action="Index">Cancel</a>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScripts" />
+}

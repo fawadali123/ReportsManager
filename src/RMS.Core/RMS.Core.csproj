@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Domain model, report engine and business rules.
+    Deliberately has no package dependencies: nothing here knows about Oracle, LDAP or ASP.NET.
+  -->
+  <PropertyGroup>
+    <RootNamespace>RMS.Core</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="RMS.Tests" />
+  </ItemGroup>
+
+</Project>

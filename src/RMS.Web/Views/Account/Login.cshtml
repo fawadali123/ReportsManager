@@ -1,0 +1,46 @@
+@model LoginViewModel
+@{
+    ViewData["Title"] = "Sign in";
+    ViewData["BodyClass"] = "rms-login-body";
+}
+<div class="rms-login">
+    <section class="rms-login-aside" aria-hidden="true">
+        <svg class="rms-mark rms-mark-lg" viewBox="0 0 28 28" focusable="false">
+            <rect x="2" y="3" width="24" height="5" rx="1.5" />
+            <rect x="2" y="11.5" width="17" height="5" rx="1.5" />
+            <rect x="2" y="20" width="10" height="5" rx="1.5" />
+        </svg>
+        <p class="rms-login-tagline">Every report your team is cleared for, in one place.</p>
+    </section>
+
+    <section class="rms-login-form">
+        <h1>Reports Management</h1>
+        <p class="text-secondary">Sign in with your network username and password.</p>
+
+        <form asp-controller="Account" asp-action="Login" method="post" novalidate>
+            <input type="hidden" asp-for="ReturnUrl" />
+
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+            <div class="mb-3">
+                <label asp-for="Username" class="form-label"></label>
+                <input asp-for="Username" class="form-control" autocomplete="username" autocapitalize="none" spellcheck="false" autofocus />
+                <span asp-validation-for="Username" class="invalid-feedback d-block"></span>
+            </div>
+
+            <div class="mb-4">
+                <label asp-for="Password" class="form-label"></label>
+                <input asp-for="Password" class="form-control" autocomplete="current-password" />
+                <span asp-validation-for="Password" class="invalid-feedback d-block"></span>
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100">Sign in</button>
+        </form>
+
+        <p class="rms-login-help">No access yet? An administrator has to add your account and assign reports to you.</p>
+    </section>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScripts" />
+}

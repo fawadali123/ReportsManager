@@ -1,0 +1,107 @@
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
+@{
+    var signedIn = User.Identity?.IsAuthenticated == true;
+    var area = ViewContext.RouteData.Values["area"] as string ?? "";
+    var controller = ViewContext.RouteData.Values["controller"] as string ?? "";
+    string Active(string forArea, string forController) =>
+        string.Equals(area, forArea, StringComparison.OrdinalIgnoreCase)
+        && string.Equals(controller, forController, StringComparison.OrdinalIgnoreCase) ? "active" : "";
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    @if (signedIn)
+    {
+        <meta name="csrf-token" content="@Antiforgery.GetAndStoreTokens(Context).RequestToken" />
+    }
+    <meta name="app-base" content="@Url.Content("~/")" />
+    <title>@ViewData["Title"] - Reports Management</title>
+    <link rel="icon" type="image/svg+xml" href="~/favicon.svg" />
+    <link rel="stylesheet" href="~/lib/bootstrap/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/lib/bootstrap-icons/bootstrap-icons.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body class="@(ViewData["BodyClass"])">
+    <a class="visually-hidden-focusable rms-skip" href="#main">Skip to content</a>
+
+    @if (signedIn)
+    {
+        <header class="rms-topbar">
+            <nav class="navbar navbar-expand-lg navbar-dark" aria-label="Main">
+                <div class="container-fluid rms-shell">
+                    <a class="navbar-brand rms-brand" asp-area="" asp-controller="Home" asp-action="Index">
+                        <svg class="rms-mark" viewBox="0 0 28 28" aria-hidden="true" focusable="false">
+                            <rect x="2" y="3" width="24" height="5" rx="1.5" />
+                            <rect x="2" y="11.5" width="17" height="5" rx="1.5" />
+                            <rect x="2" y="20" width="10" height="5" rx="1.5" />
+                        </svg>
+                        <span>Reports Management</span>
+                    </a>
+                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#rms-nav"
+                            aria-controls="rms-nav" aria-expanded="false" aria-label="Toggle navigation">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+
+                    <div class="collapse navbar-collapse" id="rms-nav">
+                        <ul class="navbar-nav me-auto">
+                            <li class="nav-item">
+                                <a class="nav-link @Active("", "Reports")" asp-area="" asp-controller="Reports" asp-action="Index">Reports</a>
+                            </li>
+                            @if (User.IsAdmin())
+                            {
+                                <li class="nav-item">
+                                    <a class="nav-link @Active("Admin", "ReportDefinitions")" asp-area="Admin" asp-controller="ReportDefinitions" asp-action="Index">Report setup</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link @Active("Admin", "Applications")" asp-area="Admin" asp-controller="Applications" asp-action="Index">Applications</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link @Active("Admin", "Categories")" asp-area="Admin" asp-controller="Categories" asp-action="Index">Categories</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link @Active("Admin", "Users")" asp-area="Admin" asp-controller="Users" asp-action="Index">Users</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link @Active("Admin", "Assignments")" asp-area="Admin" asp-controller="Assignments" asp-action="Index">Assign reports</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link @Active("Admin", "RunHistory")" asp-area="Admin" asp-controller="RunHistory" asp-action="Index">Run history</a>
+                                </li>
+                            }
+                        </ul>
+
+                        <div class="rms-account">
+                            <span class="rms-account-name" title="@User.Identity?.Name">
+                                @User.GetDisplayName()
+                                <span class="rms-role">@User.GetRole()</span>
+                            </span>
+                            <form asp-area="" asp-controller="Account" asp-action="Logout" method="post">
+                                <button type="submit" class="btn btn-sm rms-btn-ghost">
+                                    <i class="bi bi-box-arrow-right" aria-hidden="true"></i> Sign out
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+        </header>
+    }
+
+    <main id="main" class="@(signedIn ? "container-fluid rms-shell rms-main" : "")">
+        @if (signedIn)
+        {
+            <partial name="_Alerts" />
+        }
+        @RenderBody()
+    </main>
+
+    <partial name="_ConfirmDialog" />
+
+    <script src="~/lib/jquery/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Everything that touches the outside world: Oracle and SQL Server (plain ADO.NET),
+    Active Directory (LDAP) and the export file formats.
+  -->
+  <PropertyGroup>
+    <RootNamespace>RMS.Infrastructure</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Gives access to Microsoft.Extensions.* (options, logging, configuration, DI) without separate packages. -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Oracle.ManagedDataAccess.Core" Version="23.7.0" />
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="5.2.2" />
+    <PackageReference Include="System.DirectoryServices.Protocols" Version="8.0.1" />
+    <PackageReference Include="ClosedXML" Version="0.104.2" />
+    <PackageReference Include="QuestPDF" Version="2025.1.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\RMS.Core\RMS.Core.csproj" />
+  </ItemGroup>
+
+</Project>

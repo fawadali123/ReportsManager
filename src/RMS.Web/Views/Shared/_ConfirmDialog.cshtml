@@ -1,0 +1,16 @@
+@* Shared confirmation dialog. Any form with data-confirm="question" is held back until the user confirms here. *@
+<div class="modal fade" id="rms-confirm" tabindex="-1" aria-labelledby="rms-confirm-title" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title fs-5" id="rms-confirm-title">Confirm</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="rms-confirm-message"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="rms-confirm-ok">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>

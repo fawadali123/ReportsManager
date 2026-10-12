@@ -1,0 +1,17 @@
+@model int
+@{
+    var (title, message) = Model switch
+    {
+        404 => ("Page not found", "There is nothing at this address. It may have been moved or deleted."),
+        403 => ("Not allowed", "Your account does not have access to this page."),
+        400 => ("The page expired", "The form you sent was out of date. Go back, reload the page and try again."),
+        429 => ("Too many attempts", "Wait a minute and try again."),
+        _ => ("Something went wrong", $"The server answered with status {Model}."),
+    };
+    ViewData["Title"] = title;
+}
+<div class="rms-message-page">
+    <h1>@title</h1>
+    <p>@message</p>
+    <a class="btn btn-primary" asp-area="" asp-controller="Home" asp-action="Index">Back to start</a>
+</div>

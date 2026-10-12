@@ -1,0 +1,76 @@
+@model IReadOnlyList<Report>
+@{
+    ViewData["Title"] = "Report setup";
+}
+<div class="rms-page-head">
+    <div>
+        <h1>Report setup</h1>
+        <p class="rms-lead">Define what each report queries. Viewers only see a report once it is assigned to them.</p>
+    </div>
+    <a class="btn btn-primary" asp-action="Create"><i class="bi bi-plus-lg" aria-hidden="true"></i> Add report</a>
+</div>
+
+<div class="rms-panel">
+    @if (Model.Count == 0)
+    {
+        <p class="rms-empty">No reports yet. You need at least one application and one category before adding a report.</p>
+    }
+    else
+    {
+        <div class="rms-table-tools">
+            <input type="search" class="form-control" placeholder="Filter by code, name, application or category" aria-label="Filter reports" data-table-filter="#reports-table" />
+        </div>
+        <div class="table-responsive">
+            <table class="table rms-table" id="reports-table">
+                <thead>
+                    <tr>
+                        <th scope="col">Code</th>
+                        <th scope="col">Name</th>
+                        <th scope="col">Application</th>
+                        <th scope="col">Category</th>
+                        <th scope="col">Type</th>
+                        <th scope="col">Status</th>
+                        <th scope="col"><span class="visually-hidden">Actions</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var report in Model)
+                    {
+                        <tr>
+                            <td>@report.Code</td>
+                            <td>
+                                <a asp-action="Edit" asp-route-id="@report.Id">@report.Name</a>
+                                @if (!string.IsNullOrWhiteSpace(report.Description))
+                                {
+                                    <div class="rms-sub">@report.Description</div>
+                                }
+                            </td>
+                            <td>@report.ApplicationName</td>
+                            <td>@report.CategoryName</td>
+                            <td>@(report.QueryType == ReportQueryType.StoredProcedure ? "Procedure" : "Query")</td>
+                            <td>
+                                @if (report.Active && !report.IsAvailable)
+                                {
+                                    <span class="rms-status rms-status-off" title="Its application or category is inactive">Hidden</span>
+                                }
+                                else
+                                {
+                                    <span class="rms-status @(report.Active ? "rms-status-on" : "rms-status-off")">@(report.Active ? "Active" : "Inactive")</span>
+                                }
+                            </td>
+                            <td class="rms-row-actions">
+                                <a class="btn btn-sm btn-outline-secondary" asp-area="" asp-controller="Reports" asp-action="Index" asp-route-reportId="@report.Id">Run</a>
+                                <a class="btn btn-sm btn-outline-secondary" asp-action="Edit" asp-route-id="@report.Id">Edit</a>
+                                <a class="btn btn-sm btn-outline-secondary" asp-action="Create" asp-route-copyFrom="@report.Id">Copy</a>
+                                <form asp-action="Delete" asp-route-id="@report.Id" method="post"
+                                      data-confirm="Delete report @report.Name? It is removed from every user it was assigned to.">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>

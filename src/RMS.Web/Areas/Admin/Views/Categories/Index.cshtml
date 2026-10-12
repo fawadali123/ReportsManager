@@ -1,0 +1,55 @@
+@model IReadOnlyList<ReportCategory>
+@{
+    ViewData["Title"] = "Categories";
+}
+<div class="rms-page-head">
+    <div>
+        <h1>Categories</h1>
+        <p class="rms-lead">Groups that reports are filed under, shared by all applications.</p>
+    </div>
+    <a class="btn btn-primary" asp-action="Create"><i class="bi bi-plus-lg" aria-hidden="true"></i> Add category</a>
+</div>
+
+<div class="rms-panel">
+    @if (Model.Count == 0)
+    {
+        <p class="rms-empty">No categories yet. Add one before creating reports.</p>
+    }
+    else
+    {
+        <div class="rms-table-tools">
+            <input type="search" class="form-control" placeholder="Filter categories" aria-label="Filter categories" data-table-filter="#categories-table" />
+        </div>
+        <div class="table-responsive">
+            <table class="table rms-table" id="categories-table">
+                <thead>
+                    <tr>
+                        <th scope="col">Code</th>
+                        <th scope="col">Name</th>
+                        <th scope="col">Description</th>
+                        <th scope="col">Status</th>
+                        <th scope="col"><span class="visually-hidden">Actions</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var category in Model)
+                    {
+                        <tr>
+                            <td>@category.Code</td>
+                            <td>@category.Name</td>
+                            <td class="rms-wrap">@category.Description</td>
+                            <td><span class="rms-status @(category.Active ? "rms-status-on" : "rms-status-off")">@(category.Active ? "Active" : "Inactive")</span></td>
+                            <td class="rms-row-actions">
+                                <a class="btn btn-sm btn-outline-secondary" asp-action="Edit" asp-route-id="@category.Id">Edit</a>
+                                <form asp-action="Delete" asp-route-id="@category.Id" method="post"
+                                      data-confirm="Delete category @category.Name?">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
