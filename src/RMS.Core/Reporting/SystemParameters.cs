@@ -38,8 +38,8 @@ public static class SystemParameters
         new(StringComparer.OrdinalIgnoreCase)
         {
             [Username] = ParameterValue.Text(user.Username),
-            [UserId] = ParameterValue.Single(ParameterDataType.Integer, (long)user.UserId),
-            [UserCode] = ParameterValue.Text(user.Code),
+            [UserId] = ParameterValue.Single(ParameterDataType.Integer, user.UserId is int id ? (long)id : null),
+            [UserCode] = ParameterValue.Text(string.IsNullOrEmpty(user.Code) ? null : user.Code),
             [UserEmail] = ParameterValue.Text(user.Email),
         };
 }

@@ -1,0 +1,167 @@
+@model ScheduleListViewModel
+@using RMS.Core.Scheduling
+@{
+    var forReport = Model.Report;
+    ViewData["Title"] = forReport is null ? "Schedules" : $"Schedules - {forReport.Name}";
+}
+<div class="rms-page-head">
+    <div>
+        @if (forReport is not null)
+        {
+            <a class="rms-back" asp-controller="ReportDefinitions" asp-action="Edit" asp-route-id="@forReport.Id"><i class="bi bi-arrow-left" aria-hidden="true"></i> @forReport.Name</a>
+            <h1>Schedules for @forReport.Name</h1>
+        }
+        else
+        {
+            <h1>Schedules</h1>
+        }
+        <p class="rms-lead">Reports generated automatically and sent by email or saved to a shared folder by the RMS Scheduler service.</p>
+    </div>
+    <div class="rms-head-actions">
+        <a class="btn btn-outline-secondary" asp-action="Runs"><i class="bi bi-clock-history" aria-hidden="true"></i> Run history</a>
+        @if (forReport is not null)
+        {
+            <a class="btn btn-primary" asp-action="Create" asp-route-reportId="@forReport.Id"><i class="bi bi-plus-lg" aria-hidden="true"></i> Add schedule</a>
+        }
+    </div>
+</div>
+
+@if (Model.LooksStalled)
+{
+    <div class="alert alert-warning" role="alert">
+        <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+        Some schedules should have run more than a few minutes ago. Check that the <strong>RMS Scheduler</strong> Windows service
+        is running and can reach the database; its messages are in the Windows Event Log (Application, source RMS.Scheduler).
+    </div>
+}
+
+@if (forReport is null)
+{
+    <form class="rms-panel rms-add-schedule" method="get" asp-action="Create">
+        <label for="add-report" class="form-label">Schedule a report</label>
+        <div class="rms-inline-field">
+            <select id="add-report" name="reportId" class="form-select" required>
+                <option value="">Choose a report</option>
+                @foreach (var group in Model.Reports.GroupBy(r => r.ApplicationName))
+                {
+                    <optgroup label="@group.Key">
+                        @foreach (var report in group)
+                        {
+                            <option value="@report.ReportId">@report.CategoryName / @report.ReportName@(report.Available ? "" : " (inactive)")</option>
+                        }
+                    </optgroup>
+                }
+            </select>
+            <button type="submit" class="btn btn-primary"><i class="bi bi-plus-lg" aria-hidden="true"></i> Add schedule</button>
+        </div>
+    </form>
+}
+
+<div class="rms-panel">
+    @if (Model.Schedules.Count == 0)
+    {
+        <p class="rms-empty">
+            @(forReport is null ? "No reports are scheduled yet." : "This report has no schedules yet.")
+        </p>
+    }
+    else
+    {
+        <div class="rms-table-tools">
+            <input type="search" class="form-control" placeholder="Filter by name, report, recipient or folder" aria-label="Filter schedules" data-table-filter="#schedules-table" />
+        </div>
+        <div class="table-responsive">
+            <table class="table rms-table" id="schedules-table">
+                <thead>
+                    <tr>
+                        <th scope="col">Schedule</th>
+                        @if (forReport is null)
+                        {
+                            <th scope="col">Report</th>
+                        }
+                        <th scope="col">Delivery</th>
+                        <th scope="col">Next run</th>
+                        <th scope="col">Last run</th>
+                        <th scope="col">Status</th>
+                        <th scope="col"><span class="visually-hidden">Actions</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var schedule in Model.Schedules)
+                    {
+                        var recipients = EmailAddressList.Parse(schedule.EmailTo).Count + EmailAddressList.Parse(schedule.EmailCc).Count;
+                        <tr>
+                            <td>
+                                <a asp-action="Edit" asp-route-id="@schedule.Id">@schedule.Name</a>
+                                <span class="rms-sub">@ScheduleCalculator.Describe(schedule) &middot; @schedule.ExportFormat.ToUpperInvariant()</span>
+                            </td>
+                            @if (forReport is null)
+                            {
+                                <td>
+                                    @schedule.ReportName
+                                    @if (!schedule.ReportActive)
+                                    {
+                                        <span class="rms-sub">Report is inactive</span>
+                                    }
+                                </td>
+                            }
+                            <td class="rms-wrap">
+                                @if (schedule.SendEmail)
+                                {
+                                    <span class="rms-delivery" title="@schedule.EmailTo @schedule.EmailCc"><i class="bi bi-envelope" aria-hidden="true"></i> @recipients recipient@(recipients == 1 ? "" : "s")</span>
+                                }
+                                @if (schedule.SaveToShare)
+                                {
+                                    <span class="rms-delivery" title="@schedule.ShareFolder"><i class="bi bi-folder2" aria-hidden="true"></i> @schedule.ShareFolder</span>
+                                }
+                            </td>
+                            <td class="text-nowrap">
+                                @if (schedule.RunRequestedUtc is not null)
+                                {
+                                    <span class="rms-status rms-status-run">Run requested</span>
+                                }
+                                else if (schedule.LockedUntilUtc is not null)
+                                {
+                                    <span class="rms-status rms-status-run">Running</span>
+                                }
+                                else if (schedule.Active && schedule.NextRunUtc is not null)
+                                {
+                                    @ScheduleDisplay.Local(schedule.NextRunUtc, schedule.TimeZone)
+                                }
+                                else
+                                {
+                                    <span class="rms-sub">-</span>
+                                }
+                            </td>
+                            <td class="text-nowrap">
+                                @if (schedule.LastRunUtc is not null)
+                                {
+                                    <a asp-action="Runs" asp-route-id="@schedule.Id" class="rms-status @ScheduleDisplay.StatusClass(schedule.LastStatus)">@schedule.LastStatus</a>
+                                    <span class="rms-sub">@ScheduleDisplay.Local(schedule.LastRunUtc, schedule.TimeZone)</span>
+                                }
+                                else
+                                {
+                                    <span class="rms-sub">Not run yet</span>
+                                }
+                            </td>
+                            <td>
+                                <span class="rms-status @(schedule.Active ? "rms-status-on" : "rms-status-off")">@(schedule.Active ? "Active" : "Inactive")</span>
+                            </td>
+                            <td class="rms-row-actions">
+                                <form asp-action="RunNow" asp-route-id="@schedule.Id" asp-route-returnTo="@(forReport is null ? "" : "report")" method="post">
+                                    <button type="submit" class="btn btn-sm btn-outline-secondary" title="Generate and deliver it now">Run now</button>
+                                </form>
+                                <a class="btn btn-sm btn-outline-secondary" asp-action="Runs" asp-route-id="@schedule.Id">History</a>
+                                <a class="btn btn-sm btn-outline-secondary" asp-action="Edit" asp-route-id="@schedule.Id">Edit</a>
+                                <a class="btn btn-sm btn-outline-secondary" asp-action="Create" asp-route-reportId="@schedule.ReportId" asp-route-copyFrom="@schedule.Id">Copy</a>
+                                <form asp-action="Delete" asp-route-id="@schedule.Id" asp-route-reportId="@forReport?.Id" method="post"
+                                      data-confirm="Delete schedule @schedule.Name? Its run history is kept.">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>

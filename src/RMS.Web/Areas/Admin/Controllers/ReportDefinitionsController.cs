@@ -13,11 +13,16 @@ public sealed class ReportDefinitionsController(
     IApplicationRepository applications,
     IReportCategoryRepository categories,
     IReportConnectionCatalog connections,
+    IScheduleRepository schedules,
     ReportingOptions options,
     TimeProvider clock) : AdminController
 {
     [HttpGet]
-    public async Task<IActionResult> Index(CancellationToken ct) => View(await reports.GetAllAsync(ct));
+    public async Task<IActionResult> Index(CancellationToken ct)
+    {
+        ViewData["ScheduleCounts"] = await schedules.GetCountsByReportAsync(ct);
+        return View(await reports.GetAllAsync(ct));
+    }
 
     /// <param name="copyFrom">Start from a copy of this report.</param>
     [HttpGet]

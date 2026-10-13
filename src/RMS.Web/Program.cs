@@ -4,12 +4,16 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RMS.Core.Domain;
 using RMS.Infrastructure;
+using RMS.Infrastructure.Configuration;
 using RMS.Web.Security;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Machine-specific settings (connection strings, LDAP server) that should stay out of source control.
 builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true);
+
+// Any setting written as "env:NAME" (a connection string, a password) is read from environment variable NAME.
+builder.Configuration.ResolveEnvironmentReferences();
 
 // Oracle repositories, LDAP sign-in, report engine and exporters.
 builder.Services.AddReportsManagement(builder.Configuration, builder.Environment);

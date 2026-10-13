@@ -36,7 +36,7 @@ internal static class P
 
     public static DbParam Bool(string name, bool value) => new(name, DbParamType.Bool, value);
 
-    public static DbParam Timestamp(string name, DateTime value) => new(name, DbParamType.Timestamp, value);
+    public static DbParam Timestamp(string name, DateTime? value) => new(name, DbParamType.Timestamp, value);
 }
 
 /// <summary>

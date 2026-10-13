@@ -1,6 +1,7 @@
 @model IReadOnlyList<Report>
 @{
     ViewData["Title"] = "Report setup";
+    var scheduleCounts = ViewData["ScheduleCounts"] as IReadOnlyDictionary<int, int> ?? new Dictionary<int, int>();
 }
 <div class="rms-page-head">
     <div>
@@ -60,6 +61,8 @@
                             </td>
                             <td class="rms-row-actions">
                                 <a class="btn btn-sm btn-outline-secondary" asp-area="" asp-controller="Reports" asp-action="Index" asp-route-reportId="@report.Id">Run</a>
+                                <a class="btn btn-sm btn-outline-secondary" asp-controller="Schedules" asp-action="Index" asp-route-reportId="@report.Id"
+                                   title="Schedules">Schedules@(scheduleCounts.TryGetValue(report.Id, out var count) ? $" ({count})" : "")</a>
                                 <a class="btn btn-sm btn-outline-secondary" asp-action="Edit" asp-route-id="@report.Id">Edit</a>
                                 <a class="btn btn-sm btn-outline-secondary" asp-action="Create" asp-route-copyFrom="@report.Id">Copy</a>
                                 <form asp-action="Delete" asp-route-id="@report.Id" method="post"

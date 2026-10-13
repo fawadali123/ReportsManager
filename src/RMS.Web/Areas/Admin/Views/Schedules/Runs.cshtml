@@ -1,0 +1,119 @@
+@model ScheduleRunsViewModel
+@using RMS.Core.Scheduling
+@{
+    var schedule = Model.Schedule;
+    ViewData["Title"] = schedule is null ? "Schedule history" : $"History - {schedule.Name}";
+}
+<div class="rms-page-head">
+    <div>
+        @if (schedule is not null)
+        {
+            <a class="rms-back" asp-action="Edit" asp-route-id="@schedule.Id"><i class="bi bi-arrow-left" aria-hidden="true"></i> @schedule.Name</a>
+            <h1>History of @schedule.Name</h1>
+        }
+        else
+        {
+            <a class="rms-back" asp-action="Index"><i class="bi bi-arrow-left" aria-hidden="true"></i> Schedules</a>
+            <h1>Schedule history</h1>
+        }
+        <p class="rms-lead">
+            The latest @Model.PageSize runs, newest first. Times are in @ScheduleTimeZones.DisplayName(Model.TimeZoneId).
+        </p>
+    </div>
+    @if (schedule is not null)
+    {
+        <div class="rms-head-actions">
+            <form asp-action="RunNow" asp-route-id="@schedule.Id" asp-route-returnTo="edit" method="post">
+                <button type="submit" class="btn btn-outline-primary"><i class="bi bi-play-fill" aria-hidden="true"></i> Run now</button>
+            </form>
+        </div>
+    }
+</div>
+
+<div class="rms-panel">
+    @if (Model.Runs.Count == 0)
+    {
+        <p class="rms-empty">Nothing has run yet. Runs appear here once the RMS Scheduler service has picked them up.</p>
+    }
+    else
+    {
+        <div class="rms-table-tools">
+            <input type="search" class="form-control" placeholder="Filter by schedule, report, status or recipient" aria-label="Filter runs" data-table-filter="#runs-table" />
+        </div>
+        <div class="table-responsive">
+            <table class="table rms-table" id="runs-table">
+                <thead>
+                    <tr>
+                        <th scope="col">Started</th>
+                        @if (schedule is null)
+                        {
+                            <th scope="col">Schedule</th>
+                        }
+                        <th scope="col">Report</th>
+                        <th scope="col">Status</th>
+                        <th scope="col" class="text-end">Rows</th>
+                        <th scope="col">File</th>
+                        <th scope="col">Delivery</th>
+                        <th scope="col" class="text-end">Seconds</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var run in Model.Runs)
+                    {
+                        <tr>
+                            <td class="text-nowrap">
+                                @ScheduleDisplay.Local(run.StartedUtc, Model.TimeZoneId, "yyyy-MM-dd HH:mm:ss")
+                                <span class="rms-sub">@(run.Trigger == ScheduleTrigger.Manual ? "Run now" : "On schedule")@(run.MachineName is null ? "" : $" on {run.MachineName}")</span>
+                            </td>
+                            @if (schedule is null)
+                            {
+                                <td>
+                                    @if (run.ScheduleId is int scheduleId)
+                                    {
+                                        <a asp-action="Edit" asp-route-id="@scheduleId">@run.ScheduleName</a>
+                                    }
+                                    else
+                                    {
+                                        @run.ScheduleName <span class="rms-sub">deleted</span>
+                                    }
+                                </td>
+                            }
+                            <td>@run.ReportName</td>
+                            <td>
+                                <span class="rms-status @ScheduleDisplay.StatusClass(run.Status)">@run.Status</span>
+                                @if (!string.IsNullOrEmpty(run.ErrorMessage))
+                                {
+                                    <div class="rms-sub rms-wrap">@run.ErrorMessage</div>
+                                }
+                            </td>
+                            <td class="text-end rms-num">
+                                @(run.RowCount?.ToString("N0"))
+                                @if (run.Truncated)
+                                {
+                                    <span class="rms-sub" title="Stopped at the row limit for this format">limit</span>
+                                }
+                            </td>
+                            <td class="rms-wrap">
+                                @run.FileName
+                                <span class="rms-sub">@ScheduleDisplay.Size(run.FileSize)</span>
+                            </td>
+                            <td class="rms-wrap">
+                                @if (run.EmailResult is not null)
+                                {
+                                    <span class="rms-delivery @(run.EmailResult.StartsWith("Failed", StringComparison.Ordinal) ? "rms-delivery-bad" : "")"><i class="bi bi-envelope" aria-hidden="true"></i> @run.EmailResult</span>
+                                }
+                                @if (run.ShareResult is not null)
+                                {
+                                    <span class="rms-delivery @(run.ShareResult.StartsWith("Failed", StringComparison.Ordinal) ? "rms-delivery-bad" : "")"><i class="bi bi-folder2" aria-hidden="true"></i> @run.ShareResult</span>
+                                }
+                            </td>
+                            <td class="text-end rms-num">
+                                @(run.FinishedUtc is { } finished ? ((finished - run.StartedUtc).TotalSeconds).ToString("0.0") : "")
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>

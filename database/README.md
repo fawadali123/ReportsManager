@@ -11,6 +11,8 @@ so the application code does not change.
 | 3 | `02_seed_data.sql` first administrator and four sample reports | `02_seed_data.sql` | same as step 2 |
 | optional | `03_sample_stored_procedure.sql` a report that calls a procedure | `03_sample_stored_procedure.sql` | same as step 2 |
 | optional | `04_optional_readonly_report_user.sql` read-only account for report connections | `04_optional_readonly_report_user.sql` | DBA / sysadmin |
+| dev only | `05_dev_test_users.sql` adds the `admin` and `viewer` test accounts for a machine with no Active Directory | `05_dev_test_users.sql` | same as step 2 |
+| upgrade | `06_upgrade_add_scheduling.sql` adds the schedule tables to a database created before scheduling existed | `06_upgrade_add_scheduling.sql` | same as step 2 |
 | reset | `99_drop_all.sql` removes everything | `99_drop_all.sql` | same as step 2 |
 
 Before you run anything:

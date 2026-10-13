@@ -37,7 +37,7 @@ public sealed class ReportService(
             return report;
         }
 
-        if (!report.IsAvailable || !await assignments.IsAssignedAsync(user.UserId, reportId, ct))
+        if (user.UserId is not int userId || !report.IsAvailable || !await assignments.IsAssignedAsync(userId, reportId, ct))
         {
             // Same answer as "does not exist" so report Ids cannot be probed.
             throw new ReportNotFoundException(reportId);
@@ -78,17 +78,19 @@ public sealed class ReportService(
     }
 
     /// <summary>Runs the report again and writes it to <paramref name="output"/> in the exporter's format.</summary>
+    /// <param name="logAction">Action recorded in the run history; defaults to "Export:&lt;format&gt;".</param>
     public async Task<ReportExportResult> ExportAsync(
         UserContext user,
         int reportId,
         IReadOnlyDictionary<string, string[]> rawValues,
         IReportExporter exporter,
         Stream output,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        string? logAction = null)
     {
         var report = await GetAuthorizedReportAsync(user, reportId, ct);
         var prepared = await PrepareAsync(user, report, rawValues, ct);
-        var action = "Export:" + exporter.Format;
+        var action = logAction ?? "Export:" + exporter.Format;
         var stopwatch = Stopwatch.StartNew();
 
         var context = new ReportExportContext
@@ -117,6 +119,18 @@ public sealed class ReportService(
             await LogAsync(user, report, action, stopwatch.ElapsedMilliseconds, null, ex.Message, prepared.ParametersJson);
             throw;
         }
+    }
+
+    /// <summary>
+    /// Checks parameter values the way a run would (required fields, types, dropdown choices) without running
+    /// the report. Used when a schedule is saved.
+    /// </summary>
+    /// <exception cref="ReportValidationException">A value is missing or not valid.</exception>
+    public async Task ValidateValuesAsync(
+        UserContext user, int reportId, IReadOnlyDictionary<string, string[]> rawValues, CancellationToken ct = default)
+    {
+        var report = await GetAuthorizedReportAsync(user, reportId, ct);
+        await PrepareAsync(user, report, rawValues, ct);
     }
 
     private async Task<List<ReportFormField>> BuildFieldsAsync(UserContext user, Report report, CancellationToken ct)

@@ -62,7 +62,7 @@ public class ReportServiceTests
             SqlQuery = "SELECT region, total FROM region_totals",
         }).Result;
 
-        _store.Assignments.Add((Viewer.UserId, _salesReportId));
+        _store.Assignments.Add((Viewer.UserId!.Value, _salesReportId));
     }
 
     private static ReportTable Table(string[] columns, params object?[][] rows) => new()

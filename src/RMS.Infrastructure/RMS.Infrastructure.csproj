@@ -2,7 +2,7 @@
 
   <!--
     Everything that touches the outside world: Oracle and SQL Server (plain ADO.NET),
-    Active Directory (LDAP) and the export file formats.
+    Active Directory (LDAP), the export file formats, and email and file-share delivery for schedules.
   -->
   <PropertyGroup>
     <RootNamespace>RMS.Infrastructure</RootNamespace>
@@ -19,10 +19,16 @@
     <PackageReference Include="System.DirectoryServices.Protocols" Version="8.0.1" />
     <PackageReference Include="ClosedXML" Version="0.104.2" />
     <PackageReference Include="QuestPDF" Version="2025.1.0" />
+    <!-- Email for scheduled reports (SMTP). Microsoft Graph is called over plain HTTP, so it needs no package. -->
+    <PackageReference Include="MailKit" Version="4.8.0" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\RMS.Core\RMS.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="RMS.Tests" />
   </ItemGroup>
 
 </Project>

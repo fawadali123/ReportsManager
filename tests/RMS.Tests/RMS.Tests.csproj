@@ -14,6 +14,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\RMS.Core\RMS.Core.csproj" />
+    <ProjectReference Include="..\..\src\RMS.Infrastructure\RMS.Infrastructure.csproj" />
   </ItemGroup>
 
   <ItemGroup>

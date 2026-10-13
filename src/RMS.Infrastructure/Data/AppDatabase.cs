@@ -212,4 +212,14 @@ internal static class DataReaderExtensions
 
     public static DateTime Date(this DbDataReader reader, string column) =>
         Convert.ToDateTime(reader[column], CultureInfo.InvariantCulture);
+
+    public static DateTime? DateOrNull(this DbDataReader reader, string column) =>
+        reader[column] is DBNull ? null : Convert.ToDateTime(reader[column], CultureInfo.InvariantCulture);
+
+    /// <summary>Reads a UTC timestamp column; the databases return it without a kind.</summary>
+    public static DateTime? UtcOrNull(this DbDataReader reader, string column) =>
+        reader.DateOrNull(column) is { } value ? DateTime.SpecifyKind(value, DateTimeKind.Utc) : null;
+
+    public static long? LongOrNull(this DbDataReader reader, string column) =>
+        reader[column] is DBNull ? null : Convert.ToInt64(reader[column], CultureInfo.InvariantCulture);
 }

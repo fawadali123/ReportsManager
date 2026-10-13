@@ -8,7 +8,7 @@ namespace RMS.Tests.Fakes;
 /// In-memory stand-ins for the Oracle repositories, so business rules can be tested without a database.
 /// They enforce the same uniqueness and foreign-key rules the schema does.
 /// </summary>
-public sealed class InMemoryStore :
+public sealed partial class InMemoryStore :
     IUserRepository, IApplicationRepository, IReportCategoryRepository, IReportRepository,
     IUserReportRepository, IReportRunLogRepository
 {
@@ -255,6 +255,8 @@ public sealed class InMemoryStore :
             Reports.RemoveAll(r => r.Id == id);
             Assignments.RemoveWhere(a => a.ReportId == id);
             foreach (var entry in RunLog.Where(l => l.ReportId == id)) entry.ReportId = null;
+            Schedules.RemoveAll(s => s.ReportId == id); // ON DELETE CASCADE
+            foreach (var run in ScheduleRuns.Where(r => Schedules.All(s => s.Id != r.ScheduleId))) run.ScheduleId = null;
             return Task.CompletedTask;
         }
     }

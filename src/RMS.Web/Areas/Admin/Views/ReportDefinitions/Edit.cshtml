@@ -11,9 +11,14 @@
     </div>
     @if (!isNew)
     {
-        <a class="btn btn-outline-secondary" asp-area="" asp-controller="Reports" asp-action="Index" asp-route-reportId="@Model.Id">
-            <i class="bi bi-play-fill" aria-hidden="true"></i> Run this report
-        </a>
+        <div class="rms-head-actions">
+            <a class="btn btn-outline-secondary" asp-controller="Schedules" asp-action="Index" asp-route-reportId="@Model.Id">
+                <i class="bi bi-calendar-event" aria-hidden="true"></i> Schedules
+            </a>
+            <a class="btn btn-outline-secondary" asp-area="" asp-controller="Reports" asp-action="Index" asp-route-reportId="@Model.Id">
+                <i class="bi bi-play-fill" aria-hidden="true"></i> Run this report
+            </a>
+        </div>
     }
 </div>
 

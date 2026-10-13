@@ -1,0 +1,414 @@
+@model ScheduleEditModel
+@using System.Globalization
+@using RMS.Core.Reporting
+@using RMS.Core.Scheduling
+@{
+    var isNew = Model.Id == 0;
+    var reportName = Model.Report?.Name ?? "report";
+    ViewData["Title"] = isNew ? "Add schedule" : "Edit schedule";
+    string Checked(bool on) => on ? "checked" : "";
+    string? FieldError(string key) =>
+        ViewData.ModelState.TryGetValue(key, out var entry) && entry.Errors.Count > 0 ? entry.Errors[0].ErrorMessage : null;
+    var frequencies = new[]
+    {
+        (ScheduleFrequency.Once, "Once", "bi-1-circle"),
+        (ScheduleFrequency.Hourly, "Hourly", "bi-clock"),
+        (ScheduleFrequency.Daily, "Daily", "bi-sun"),
+        (ScheduleFrequency.Weekly, "Weekly", "bi-calendar-week"),
+        (ScheduleFrequency.Monthly, "Monthly", "bi-calendar-month"),
+    };
+}
+<div class="rms-page-head">
+    <div>
+        <a class="rms-back" asp-action="Index" asp-route-reportId="@Model.ReportId"><i class="bi bi-arrow-left" aria-hidden="true"></i> Schedules for @reportName</a>
+        <h1>@(isNew ? $"Schedule {reportName}" : $"Edit {Model.Name}")</h1>
+    </div>
+    @if (!isNew)
+    {
+        <div class="rms-head-actions">
+            <a class="btn btn-outline-secondary" asp-action="Runs" asp-route-id="@Model.Id"><i class="bi bi-clock-history" aria-hidden="true"></i> History</a>
+            <form asp-action="RunNow" asp-route-id="@Model.Id" asp-route-returnTo="edit" method="post">
+                <button type="submit" class="btn btn-outline-primary"><i class="bi bi-play-fill" aria-hidden="true"></i> Run now</button>
+            </form>
+        </div>
+    }
+</div>
+
+@if (!isNew && Model.RunRequestedUtc is not null)
+{
+    <div class="alert alert-info" role="status">
+        <i class="bi bi-hourglass-split" aria-hidden="true"></i>
+        A run was requested at @ScheduleDisplay.Local(Model.RunRequestedUtc, Model.TimeZone) and is waiting for the scheduler service.
+    </div>
+}
+
+<form asp-action="@(isNew ? "Create" : "Edit")" asp-route-id="@(isNew ? "" : Model.Id.ToString())" method="post" id="schedule-editor" novalidate>
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+    <input type="hidden" asp-for="ReportId" />
+
+    <section class="rms-panel rms-form rms-form-wide" aria-labelledby="general-heading">
+        <h2 id="general-heading" class="rms-panel-title">Schedule</h2>
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label asp-for="Name" class="form-label"></label>
+                <input asp-for="Name" class="form-control" autofocus />
+                <span asp-validation-for="Name" class="invalid-feedback d-block"></span>
+            </div>
+            <div class="col-md-2">
+                <label asp-for="ExportFormat" class="form-label"></label>
+                <select asp-for="ExportFormat" class="form-select">
+                    @foreach (var exporter in Model.Exporters)
+                    {
+                        <option value="@exporter.Format">@exporter.DisplayName</option>
+                    }
+                </select>
+                <span asp-validation-for="ExportFormat" class="invalid-feedback d-block"></span>
+            </div>
+            <div class="col-md-2">
+                <span class="form-label d-block">Status</span>
+                <div class="form-check form-switch rms-switch">
+                    <input asp-for="Active" class="form-check-input" role="switch" />
+                    <label asp-for="Active" class="form-check-label">Active</label>
+                </div>
+            </div>
+            <div class="col-12">
+                <span class="rms-sub">
+                    Report: <strong>@reportName</strong>@(Model.Report is { IsAvailable: false } ? " (inactive; scheduled runs still produce it)" : "").
+                    Runs as <code>@Model.RunAsUsername</code>, which is what <code>@@@SystemParameters.Username</code> holds;
+                    <code>@@@SystemParameters.UserId</code> and the other user parameters are empty.
+                </span>
+                <span asp-validation-for="ReportId" class="invalid-feedback d-block"></span>
+            </div>
+        </div>
+    </section>
+
+    <section class="rms-panel rms-form rms-form-wide" aria-labelledby="when-heading">
+        <h2 id="when-heading" class="rms-panel-title">When</h2>
+
+        <fieldset class="mb-3">
+            <legend class="form-label">How often</legend>
+            <div class="rms-segmented" role="radiogroup">
+                @foreach (var (value, label, icon) in frequencies)
+                {
+                    <input type="radio" class="btn-check" name="Frequency" id="frequency-@value" value="@value" autocomplete="off" @Checked(Model.Frequency == value) />
+                    <label class="btn btn-outline-primary" for="frequency-@value"><i class="bi @icon" aria-hidden="true"></i> @label</label>
+                }
+            </div>
+            <span asp-validation-for="Frequency" class="invalid-feedback d-block"></span>
+        </fieldset>
+
+        <div class="row g-3">
+            <div class="col-md-4" data-frequency="Once">
+                <label asp-for="RunOnceAt" class="form-label"></label>
+                <input type="datetime-local" name="RunOnceAt" id="RunOnceAt" class="form-control"
+                       value="@(Model.RunOnceAt?.ToString("yyyy-MM-ddTHH:mm", CultureInfo.InvariantCulture))" />
+                <span asp-validation-for="RunOnceAt" class="invalid-feedback d-block"></span>
+            </div>
+
+            <div class="col-md-2" data-frequency="Hourly">
+                <label asp-for="IntervalHours" class="form-label"></label>
+                <select asp-for="IntervalHours" class="form-select">
+                    @for (var h = 1; h <= 23; h++)
+                    {
+                        <option value="@h">@(h == 1 ? "1 hour" : $"{h} hours")</option>
+                    }
+                </select>
+                <span asp-validation-for="IntervalHours" class="invalid-feedback d-block"></span>
+            </div>
+
+            <div class="col-md-2" data-frequency="Hourly Daily Weekly Monthly">
+                <label for="RunTime" class="form-label" data-label-hourly="First run at" data-label-default="Time">Time</label>
+                <input type="time" name="RunTime" id="RunTime" class="form-control" value="@Model.RunTime" />
+                <span asp-validation-for="RunTime" class="invalid-feedback d-block"></span>
+            </div>
+
+            <div class="col-md-2" data-frequency="Hourly">
+                <label asp-for="EndTime" class="form-label"></label>
+                <input type="time" name="EndTime" id="EndTime" class="form-control" value="@Model.EndTime" />
+                <div class="form-text">Empty: until midnight.</div>
+                <span asp-validation-for="EndTime" class="invalid-feedback d-block"></span>
+            </div>
+
+            <div class="col-md-3" data-frequency="Monthly">
+                <label asp-for="DayOfMonth" class="form-label"></label>
+                <select asp-for="DayOfMonth" class="form-select">
+                    @for (var d = 1; d <= 31; d++)
+                    {
+                        <option value="@d">@d</option>
+                    }
+                    <option value="@ReportSchedule.LastDayOfMonth">Last day of the month</option>
+                </select>
+                <div class="form-text">In a shorter month, days 29 to 31 run on its last day.</div>
+                <span asp-validation-for="DayOfMonth" class="invalid-feedback d-block"></span>
+            </div>
+
+            <div class="col-12" data-frequency="Hourly Daily Weekly">
+                <fieldset>
+                    <legend class="form-label" data-label-weekly="On these days" data-label-default="Only on these days">On these days</legend>
+                    <div class="rms-days">
+                        @foreach (var day in ScheduleDays.Week)
+                        {
+                            <input type="checkbox" class="btn-check" name="DaysOfWeek" id="day-@day" value="@day" autocomplete="off" @Checked(Model.DaysOfWeek.Contains(day)) />
+                            <label class="btn btn-sm btn-outline-secondary" for="day-@day" title="@day">@ScheduleDays.ShortName(day)</label>
+                        }
+                        <button type="button" class="btn btn-sm btn-link" data-days="Sunday Monday Tuesday Wednesday Thursday">Sun to Thu</button>
+                        <button type="button" class="btn btn-sm btn-link" data-days="Monday Tuesday Wednesday Thursday Friday">Mon to Fri</button>
+                        <button type="button" class="btn btn-sm btn-link" data-days="Sunday Monday Tuesday Wednesday Thursday Friday Saturday">Every day</button>
+                    </div>
+                    <span asp-validation-for="DaysOfWeek" class="invalid-feedback d-block"></span>
+                </fieldset>
+            </div>
+
+            <div class="col-md-4">
+                <label asp-for="TimeZone" class="form-label"></label>
+                <select asp-for="TimeZone" class="form-select">
+                    @if (!Model.TimeZones.Any(z => z.Id == Model.TimeZone) && !string.IsNullOrEmpty(Model.TimeZone))
+                    {
+                        <option value="@Model.TimeZone">@Model.TimeZone</option>
+                    }
+                    @foreach (var zone in Model.TimeZones)
+                    {
+                        <option value="@zone.Id">@zone.DisplayName</option>
+                    }
+                </select>
+                <span asp-validation-for="TimeZone" class="invalid-feedback d-block"></span>
+            </div>
+            <div class="col-md-3" data-frequency="Hourly Daily Weekly Monthly">
+                <label asp-for="StartDate" class="form-label"></label>
+                <input type="date" name="StartDate" id="StartDate" class="form-control" value="@(Model.StartDate?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture))" />
+                <div class="form-text">Optional.</div>
+            </div>
+            <div class="col-md-3" data-frequency="Hourly Daily Weekly Monthly">
+                <label asp-for="EndDate" class="form-label"></label>
+                <input type="date" name="EndDate" id="EndDate" class="form-control" value="@(Model.EndDate?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture))" />
+                <div class="form-text">Optional.</div>
+                <span asp-validation-for="EndDate" class="invalid-feedback d-block"></span>
+            </div>
+        </div>
+
+        @if (!isNew)
+        {
+            <div class="rms-upcoming">
+                @if (Model.UpcomingRuns.Count > 0)
+                {
+                    <span class="rms-sub">Next runs (as saved):</span>
+                    <ul>
+                        @foreach (var run in Model.UpcomingRuns)
+                        {
+                            <li>@run.ToString("ddd yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture)</li>
+                        }
+                    </ul>
+                }
+                else
+                {
+                    <span class="rms-sub">As saved, this schedule has no further runs.</span>
+                }
+                @if (Model.LastRunUtc is not null)
+                {
+                    <span class="rms-sub">
+                        Last run @ScheduleDisplay.Local(Model.LastRunUtc, Model.TimeZone):
+                        <a asp-action="Runs" asp-route-id="@Model.Id" class="rms-status @ScheduleDisplay.StatusClass(Model.LastStatus)">@Model.LastStatus</a>
+                    </span>
+                }
+            </div>
+        }
+    </section>
+
+    <section class="rms-panel rms-form rms-form-wide" aria-labelledby="values-heading">
+        <h2 id="values-heading" class="rms-panel-title">Parameter values</h2>
+        @if (Model.Fields.Count == 0)
+        {
+            <p class="rms-empty">This report has no parameters.</p>
+        }
+        else
+        {
+            <p class="rms-lead">
+                The values each run uses. For dates, a token such as <code>START_OF_PREV_MONTH</code> or <code>TODAY-7</code>
+                is worked out when the schedule runs, so a monthly report always covers the right month.
+            </p>
+            <datalist id="date-tokens">
+                @foreach (var token in DefaultValueResolver.DateTokens)
+                {
+                    <option value="@token"></option>
+                }
+            </datalist>
+            <div class="row g-3">
+                @foreach (var field in Model.Fields)
+                {
+                    var id = "param-" + field.Name;
+                    var values = Model.ParameterValues.GetValueOrDefault(field.Name) ?? [];
+                    var first = values.FirstOrDefault() ?? "";
+                    var error = FieldError("p." + field.Name);
+                    <div class="@(field.AllowMultiple ? "col-12" : "col-md-4")">
+                        <label for="@id" class="form-label">
+                            @field.Label
+                            @if (!field.Required)
+                            {
+                                <span class="rms-optional">optional</span>
+                            }
+                        </label>
+
+                        @if (field.Options is not null && field.AllowMultiple)
+                        {
+                            <div class="rms-check-list" id="@id" role="group" aria-label="@field.Label">
+                                @foreach (var option in field.Options)
+                                {
+                                    var optionId = id + "-" + option.Value;
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="p.@field.Name" id="@optionId" value="@option.Value" @Checked(values.Contains(option.Value)) />
+                                        <label class="form-check-label" for="@optionId">@option.Label</label>
+                                    </div>
+                                }
+                            </div>
+                        }
+                        else if (field.Options is not null)
+                        {
+                            <select class="form-select @(error is null ? "" : "is-invalid")" name="p.@field.Name" id="@id">
+                                <option value="">@(field.Required ? "Choose" : "(any)")</option>
+                                @foreach (var option in field.Options)
+                                {
+                                    if (option.Value == first)
+                                    {
+                                        <option value="@option.Value" selected>@option.Label</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="@option.Value">@option.Label</option>
+                                    }
+                                }
+                            </select>
+                        }
+                        else if (field.DataType == ParameterDataType.Boolean)
+                        {
+                            var normalized = first.ToLowerInvariant() switch { "true" or "1" or "yes" or "y" or "on" => "true", "false" or "0" or "no" or "n" or "off" => "false", _ => "" };
+                            <select class="form-select @(error is null ? "" : "is-invalid")" name="p.@field.Name" id="@id">
+                                @foreach (var (value, text) in new[] { ("", field.Required ? "Choose" : "(any)"), ("true", "Yes"), ("false", "No") })
+                                {
+                                    if (value == normalized)
+                                    {
+                                        <option value="@value" selected>@text</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="@value">@text</option>
+                                    }
+                                }
+                            </select>
+                        }
+                        else if (field.DataType is ParameterDataType.Date or ParameterDataType.DateTime)
+                        {
+                            <input class="form-control @(error is null ? "" : "is-invalid")" name="p.@field.Name" id="@id" value="@first" list="date-tokens"
+                                   autocomplete="off" placeholder="@(field.DataType == ParameterDataType.Date ? "START_OF_MONTH or 2026-01-31" : "NOW or 2026-01-31T08:00")" />
+                        }
+                        else
+                        {
+                            <input class="form-control @(error is null ? "" : "is-invalid")" name="p.@field.Name" id="@id" value="@first"
+                                   inputmode="@(field.DataType is ParameterDataType.Integer or ParameterDataType.Decimal ? "decimal" : "text")" />
+                        }
+
+                        @if (!string.IsNullOrWhiteSpace(field.HelpText))
+                        {
+                            <div class="form-text">@field.HelpText</div>
+                        }
+                        @if (field.LookupError is not null)
+                        {
+                            <div class="form-text text-danger">@field.LookupError</div>
+                        }
+                        @if (error is not null)
+                        {
+                            <span class="invalid-feedback d-block">@error</span>
+                        }
+                    </div>
+                }
+            </div>
+        }
+    </section>
+
+    <section class="rms-panel rms-form rms-form-wide" aria-labelledby="delivery-heading">
+        <h2 id="delivery-heading" class="rms-panel-title">Delivery</h2>
+
+        <div class="form-check form-switch mb-2">
+            <input asp-for="SendEmail" class="form-check-input" role="switch" data-toggles="#email-settings" />
+            <label asp-for="SendEmail" class="form-check-label"></label>
+        </div>
+        <div id="email-settings" class="rms-subsection">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label asp-for="EmailTo" class="form-label"></label>
+                    <textarea asp-for="EmailTo" class="form-control" rows="2" placeholder="finance.team@company.com; cfo@company.com"></textarea>
+                    <div class="form-text">
+                        Separate addresses with semicolons.
+                        @if (Model.AllowedEmailDomains.Count > 0)
+                        {
+                            <span>Allowed domains: @string.Join(", ", Model.AllowedEmailDomains).</span>
+                        }
+                    </div>
+                    <span asp-validation-for="EmailTo" class="invalid-feedback d-block"></span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="EmailCc" class="form-label"></label>
+                    <textarea asp-for="EmailCc" class="form-control" rows="2"></textarea>
+                    <span asp-validation-for="EmailCc" class="invalid-feedback d-block"></span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="EmailSubject" class="form-label"></label>
+                    <input asp-for="EmailSubject" class="form-control" placeholder="@FileNameTemplate.DefaultSubject" />
+                    <span asp-validation-for="EmailSubject" class="invalid-feedback d-block"></span>
+                </div>
+                <div class="col-12">
+                    <label asp-for="EmailBody" class="form-label"></label>
+                    <textarea asp-for="EmailBody" class="form-control" rows="3" placeholder="Optional text above the report summary"></textarea>
+                    <span asp-validation-for="EmailBody" class="invalid-feedback d-block"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-check form-switch mb-2 mt-3">
+            <input asp-for="SaveToShare" class="form-check-input" role="switch" data-toggles="#share-settings" />
+            <label asp-for="SaveToShare" class="form-check-label"></label>
+        </div>
+        <div id="share-settings" class="rms-subsection">
+            <div class="row g-3">
+                <div class="col-md-8">
+                    <label asp-for="ShareFolder" class="form-label"></label>
+                    <input asp-for="ShareFolder" class="form-control rms-code" placeholder="@(Model.AllowedShareRoots.FirstOrDefault() ?? @"\\fileserver\reports")\finance" spellcheck="false" />
+                    <div class="form-text">
+                        The scheduler service account needs write access to it.
+                        @if (Model.AllowedShareRoots.Count > 0)
+                        {
+                            <span>Allowed: @string.Join(", ", Model.AllowedShareRoots) and their subfolders.</span>
+                        }
+                    </div>
+                    <span asp-validation-for="ShareFolder" class="invalid-feedback d-block"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-3 mt-1">
+            <div class="col-md-6">
+                <label asp-for="FileNamePattern" class="form-label"></label>
+                <input asp-for="FileNamePattern" class="form-control" placeholder="@FileNameTemplate.DefaultFileName" spellcheck="false" />
+                <div class="form-text">
+                    Without extension. <code>{ReportCode}</code>, <code>{ReportName}</code>, <code>{ScheduleName}</code> and date formats
+                    such as <code>{yyyy-MM-dd}</code> are filled in with the run's time. Used for the attachment and the saved file.
+                </div>
+                <span asp-validation-for="FileNamePattern" class="invalid-feedback d-block"></span>
+            </div>
+            <div class="col-md-6 d-flex align-items-end">
+                <div class="form-check">
+                    <input asp-for="SkipIfEmpty" class="form-check-input" />
+                    <label asp-for="SkipIfEmpty" class="form-check-label"></label>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="rms-form-actions rms-form-actions-page">
+        <button type="submit" class="btn btn-primary">@(isNew ? "Add schedule" : "Save changes")</button>
+        <a class="btn btn-link" asp-action="Index" asp-route-reportId="@Model.ReportId">Cancel</a>
+    </div>
+</form>
+
+@section Scripts {
+    <script src="~/js/schedule-editor.js" asp-append-version="true"></script>
+}
